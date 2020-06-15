@@ -14,15 +14,16 @@ stages:
 
 .install-deps-template: &install-deps
   before_script:
-    - pip install poetry
+    - export PATH="/var/lib/gitlab-runner/.local/bin:$PATH"
+    - pip3 install poetry
     - poetry --version
-    - poetry config settings.virtualenvs.in-project true
+    - poetry config virtualenvs.in-project true
     - poetry install -vv
 
 .quality-template: &quality
   <<: *install-deps
   image: python:3.7
-  stage: quality
+  stage: lint
   tags:
     - python3
   except:
@@ -64,18 +65,19 @@ Python 3 CLI Tool:
   <<: *test
   script:
     - git clone https://github.com/inducer/relate-sample
-    - poetry shell
     - cd relate-sample
-    - relate validate .
-    - relate test-code questions/autograded-python-example.yml
-    - relate expand-yaml flows/quiz-test.yml > /dev/null
+    - poetry run relate validate .
+    - poetry run relate test-code questions/autograded-python-example.yml
+    - poetry run relate expand-yaml flows/quiz-test.yml > /dev/null
 
 Documentation:
   <<: *install-deps
+  stage: docs
   variables:
     RELATE_LOCAL_TEST_SETTINGS: './local_settings_example.py'
   script:
     - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-docs.sh
+    - export PY_EXE="$(poetry run which python)"
     - poetry run ./build-docs.sh
   tags:
     - python3
